@@ -1,20 +1,42 @@
 (ns scalything.core
-(:require [reagent.core :as r]))
+  (:require [reagent.core :as r]
+            [scalything.audio :as a]))
 
 
-(defonce S (r/atom "foo"))
+(defonce S (r/atom {}))
 
+(defonce SX (r/atom "foo"))
 
-(js/console.log "Hello World I'm gooda!")
-
+(js/console.log "Starting up!")
 
 (defn simple-component []
   [:div
-   [:p "I am a component!"]
+   [:p "I am a component."]
    [:p.someclass
     "I have " [:strong "bold"]
-    [:span {:style {:color "red"}} " and red keeping state "] "text.:" @S  ]])
+    [:span {:style {:color "red"}} " and reda keeping state "] "text.:" @SX]])
 
-  (r/render [simple-component]
-            (js/document.getElementById "app"))
 
+(defn getrms [state]
+	(a/rms (:samples state)))
+
+
+(defn printrms []
+	(js/setTimeout (partial a/readAudioToAtom S) 100)
+
+
+	[:div 
+		[:p "Audiocontext"]
+		;(str @S)
+		[:p "rms"]
+		(getrms @S)
+
+	]
+
+)
+
+
+(r/render [printrms]
+          (js/document.getElementById "app"))
+
+(a/getUserMedia S)
