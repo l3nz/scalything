@@ -51,27 +51,67 @@
           (range (.-length buf))))
 
 (defn readAudio [analyser]
-  (let [size 1000
+  (let [size 1024
         buf (new js/Float32Array size)
         _ (.getFloatTimeDomainData analyser buf)]
 
     (float32->array buf)))
 
-
-(defn readAudioToAtom [myAtom]
-	(let [analyser (:analyser @myAtom)
-		  vals (if (nil? analyser)
-		            []
-		            (readAudio analyser))]
-		(swap! myAtom merge {:samples vals})))
-
-
-(defn rms
-  "Computes RMS"
+(defn compute-rms
+  "Computes RMS on a CLJS vector"
 
   [buffer]
   (let [addsquared (fn [a v]  (+ a (* v v)))
         v  (reduce addsquared 0 buffer)]
     (Math/sqrt (/ v (count buffer)))))
 
+(defn autocorrelation
+  "Computes autocorrelation on a CLJS vector.
+	1 - (sum( v[n] - v[n+offset]) / size)
 
+	"
+  [data offset]
+  (let  [size (count data)
+         p0 (range size)
+         p1 (map #(mod (+ offset %) size) p0)
+         diff (map #(Math/abs (- (get data %1) (get data %2)))
+                   p0 p1)]
+
+    (- 1.0 (/ (reduce + 0.0 diff) size))))
+
+(defn find-best-autocorrelation
+  [data]
+
+  (let [max-offset (/ (count data) 3)
+        correlations (map (partial autocorrelation data) (range max-offset))]
+
+    correlations))
+
+(defn compute-autocorrelation
+  [data]
+  (if (empty? data)
+    {:rms 0.0 :bac -1 :corrs []}
+
+    (let [rms (compute-rms data)]
+      (if (< rms 0.1)
+        {:rms rms :bac -2 :corrs []}
+
+        (let [bacs (find-best-autocorrelation data)]
+          {:rms rms :bac -3 :corrs bacs})))))
+
+(defn readAudioToAtom
+  [myAtom]
+  (let [analyser (:analyser @myAtom)
+        vals (if (nil? analyser)
+               []
+               (readAudio analyser))
+        results (compute-autocorrelation vals)]
+
+    (swap! myAtom merge results)))
+
+(defn freqForBin
+  [nBin samplingRate]
+
+  (if (pos? nBin)
+    (/ samplingRate nBin)
+    0))

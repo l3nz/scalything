@@ -1,6 +1,7 @@
 (defproject scalything "0.1.0-SNAPSHOT"
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [reagent "0.8.1"]]
+                 [reagent "0.8.1"]
+                 [cljsjs/chartjs "2.8.0-0"]]
   :aliases {"fig" ["trampoline" "run" "-m" "figwheel.main"]
             "figdev" ["trampoline" "run" "-m" "figwheel.main" "--" "--build" "dev" "--repl"]
             "fix" ["cljfmt" "fix"]}
