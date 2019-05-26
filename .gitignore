@@ -1,4 +1,6 @@
 .rebel_readline_history
 /target
 .cli-kondo-cache
+.idea/
+*.iml
 
