@@ -7,7 +7,6 @@
             [scalything.cfg :as cfg]
             [scalything.notes :as notes]))
 
-
 (js/console.log "Starting up!")
 
 (defn f2 [fnum]
@@ -23,11 +22,9 @@
   [nBin]
 
   (->
-    (a/freqForBin nBin (currentSampleRate))
-    notes/noteNumFromPitch
-    notes/toNoteNameShort))
-
-
+   (a/freqForBin nBin (currentSampleRate))
+   notes/noteNumFromPitch
+   notes/toNoteNameShort))
 
 (defn getrms [state]
   (str (f2 (* 100 (:rms state))) "%"))
@@ -81,7 +78,6 @@
 
 (defn printrms []
 
-
   (let [corrs (:corrs @cfg/S)
         prev  (:bins @cfg/S)
         v (take 5 (data->frq corrs .9))
@@ -106,7 +102,6 @@
 
    (print-vals (:corrs @cfg/S))])
 
-
 (defn main-loop []
 
   (js/setTimeout (partial a/readAudioToAtom cfg/S) 100)
@@ -117,14 +112,7 @@
         :target "tests"}
     "Auto-tests"]
 
-   (printrms)
-
-
-   ]
-
-  )
-
-
+   (printrms)])
 
 (r/render [main-loop]
           (js/document.getElementById "app"))
