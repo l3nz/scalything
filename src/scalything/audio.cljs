@@ -11,7 +11,7 @@
     (js/window.AudioContext.) ; unprefixed version yet.
     (js/window.webkitAudioContext.)))
 
-(def audioContext
+(defonce audioContext
   (delay (create-audio-context)))
 
 (defn log [& rest]
@@ -22,14 +22,14 @@
 
 (defn audioEnvironment
   [stream]
-  (let [streamSrc	(.createMediaStreamSource @audioContext stream)
+  (let [samplerate (.-sampleRate @audioContext)
+        streamSrc	(.createMediaStreamSource @audioContext stream)
         analyser (.createAnalyser @audioContext)
         _ (.connect streamSrc analyser)]
 
     {:audio-context @audioContext
+     :sampling-rate samplerate
      :analyser analyser}))
-
-(defonce AUDIO (atom nil))
 
 (defn getUserMedia
   "https://github.com/johnjelinek/cljs-getusermedia/blob/master/src/cljs/gum/core.cljs
@@ -45,17 +45,39 @@
 
     (. js/navigator (mozGetUserMedia constraints on-success on-error))))
 
+
+(defn getUserMediaIfNeeded
+  [myAtom]
+  (if (nil? (:audio-context @myAtom))
+    (getUserMedia myAtom)
+
+    )
+
+  )
+
+
 (defn float32->array [buf]
   (reduce (fn [a v] (conj a (aget buf v)))
           []
           (range (.-length buf))))
 
-(defn readAudio [analyser]
-  (let [size 1024
-        buf (new js/Float32Array size)
-        _ (.getFloatTimeDomainData analyser buf)]
+(defn readAudio
+  "Reads 1024 bytes from the analyser.
+  If the analyser does not yet exist, it returns []"
 
-    (float32->array buf)))
+  [analyser]
+
+  (cond
+
+    (nil? analyser)
+    []
+
+    :else
+    (let [size 1024
+          buf (new js/Float32Array size)
+          _ (.getFloatTimeDomainData analyser buf)]
+
+      (float32->array buf))))
 
 (defn compute-rms
   "Computes RMS on a CLJS vector"
@@ -90,14 +112,21 @@
 (defn compute-autocorrelation
   [data]
   (if (empty? data)
-    {:rms 0.0 :bac -1 :corrs []}
+    {:rms 0.0 :audio-state :no-input :corrs []}
 
     (let [rms (compute-rms data)]
       (if (< rms 0.1)
-        {:rms rms :bac -2 :corrs []}
+        {:rms rms :audio-state :low-volume :corrs []}
 
         (let [bacs (find-best-autocorrelation data)]
-          {:rms rms :bac -3 :corrs bacs})))))
+          {:rms rms :audio-state :ok :corrs bacs})))))
+
+(defn readAudioStructure
+  "returns {:rms 0.0 :bac -1 :corrs [....]}"
+
+  [analyser]
+  (let [vals (readAudio analyser)]
+    (compute-autocorrelation vals)))
 
 (defn readAudioToAtom
   [myAtom]

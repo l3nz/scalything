@@ -5,7 +5,8 @@
             [clojure.string :as str]
             [cljs.pprint :as pprint]
             [scalything.cfg :as cfg]
-            [scalything.notes :as notes]))
+            [scalything.notes :as notes]
+            [scalything.view :as v]))
 
 (js/console.log "Starting up!")
 
@@ -13,10 +14,7 @@
   (pprint/cl-format nil  "~,2f" fnum))
 
 (defn currentSampleRate []
-  (let [ac (:audio-context @cfg/S)]
-    (cond
-      (nil? ac) 44100
-      :else (.-sampleRate ac))))
+  (:sampling-rate @cfg/S))
 
 (defn noteForBin
   [nBin]
@@ -40,7 +38,7 @@
      :error error
      :corr value}))
 
-(defn data->frq [data threshold]
+(defn data->frq [data  threshold]
   (let [samplerate  (currentSampleRate)
         allVals (map (partial bin->freq (vec data)  samplerate)
                      (range (count data)))
@@ -102,9 +100,61 @@
 
    (print-vals (:corrs @cfg/S))])
 
+(defn _bin->freq [data samplerate nBin]
+  (let [value (get data nBin)
+        freq (a/freqForBin nBin samplerate)
+        {:keys [note oct error]} (notes/toNote (notes/noteNumFromPitch freq))]
+
+    {:bin nBin
+     :frq freq
+     :note (str note " " oct)
+     :error error
+     :corr value}))
+
+(defn _data->frq [data samplerate threshold]
+  (let [allVals (map (partial _bin->freq (vec data)  samplerate)
+                     (range (count data)))
+        no-low-bins (filter #(> cfg/LOWEST-NOTE (:bin %) cfg/HIGHEST-NOTE) allVals)
+        goodEnough (filter #(> (:corr %) threshold) no-low-bins)]
+
+    (reverse (sort-by :corr goodEnough))))
+
+(defn update-bounded-vector
+  "Adds an item to the end of our bounded-size vector."
+  [myVec newData max-len]
+
+  (let [newVec (conj myVec newData)
+        toSkip (- (count newVec) max-len)]
+    (if (pos? toSkip)
+      (vec (drop toSkip newVec))
+      newVec)))
+
+(defn updateSnapshots
+  [snapshots state corrs samplerate threshold]
+
+  (cond
+    (= :ok state)
+    (let [new-best (take 3 (_data->frq corrs samplerate threshold))]
+      (update-bounded-vector snapshots new-best cfg/STATE-SIZE))
+
+    :else
+    snapshots))
+
+(defn process-new-data-in [myAtom]
+
+  (let [{:keys [analyser snapshots sample-rate]} @myAtom
+        analysis (a/readAudioStructure analyser)
+        state (:audio-state analysis)
+        corrs (:corrs analysis)
+
+        new-snapshots (updateSnapshots snapshots state corrs sample-rate 0.9)
+        newAnalysis (assoc analysis :snapshots new-snapshots)]
+
+    (swap! myAtom merge newAnalysis)))
+
 (defn main-loop []
 
-  (js/setTimeout (partial a/readAudioToAtom cfg/S) 100)
+  (js/setTimeout (partial process-new-data-in cfg/S) 100)
 
   [:div
 
@@ -112,9 +162,9 @@
         :target "tests"}
     "Auto-tests"]
 
-   (printrms)])
+   (v/print-main-screen)])
 
 (r/render [main-loop]
           (js/document.getElementById "app"))
 
-(a/getUserMedia cfg/S)
+(a/getUserMediaIfNeeded cfg/S)
