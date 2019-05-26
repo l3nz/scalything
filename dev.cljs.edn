@@ -1,2 +1,6 @@
-^{:css-dirs ["resources/public/css"]}
+^{:css-dirs ["resources/public/css"]
+  :watch-dirs ["src" "test"]
+  ; /figwheel-extra-main/auto-testing
+  :auto-testing true
+}
 {:main scalything.core}

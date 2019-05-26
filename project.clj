@@ -8,7 +8,7 @@
             "clj-kondo" ["trampoline" "run" "-m" "clj-kondo.main" "--" "--lint" "src/" "--cache" ".cli-kondo-cache"]}
   
   :plugins [[lein-cljfmt "0.6.4"]]
-  :source-paths ["src"]
+  :source-paths ["src" "test"]
 
   :profiles
   {:dev
