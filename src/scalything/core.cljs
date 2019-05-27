@@ -42,7 +42,7 @@
   (let [samplerate  (currentSampleRate)
         allVals (map (partial bin->freq (vec data)  samplerate)
                      (range (count data)))
-        no-low-bins (filter #(> cfg/LOWEST-NOTE (:bin %) cfg/HIGHEST-NOTE) allVals)
+        no-low-bins (filter #(> cfg/LOWEST-NOTE-BIN (:bin %) cfg/HIGHEST-NOTE-BIN) allVals)
         goodEnough (filter #(> (:corr %) threshold) no-low-bins)]
 
     (reverse (sort-by :corr goodEnough))))
@@ -85,8 +85,8 @@
     )
 
   [:div
-   [:h3 "Reading from " (noteForBin cfg/HIGHEST-NOTE)
-    " to " (noteForBin cfg/LOWEST-NOTE)]
+   [:h3 "Reading from " (noteForBin cfg/HIGHEST-NOTE-BIN)
+    " to " (noteForBin cfg/LOWEST-NOTE-BIN)]
 
    (note-grid)
 
@@ -103,18 +103,24 @@
 (defn _bin->freq [data samplerate nBin]
   (let [value (get data nBin)
         freq (a/freqForBin nBin samplerate)
-        {:keys [note oct error]} (notes/toNote (notes/noteNumFromPitch freq))]
+        noteNum (notes/noteNumFromPitch freq)
+        noteId  (notes/noteOfPertinence noteNum)
+        {:keys [note oct error]} (notes/toNote noteNum)]
 
     {:bin nBin
      :frq freq
-     :note (str note " " oct)
+     :noteName (str note " " oct)
+     :noteId noteId
      :error error
      :corr value}))
 
 (defn _data->frq [data samplerate threshold]
-  (let [allVals (map (partial _bin->freq (vec data)  samplerate)
+  (let [_ (cfg/log "Samplerate" samplerate "Thr:" threshold)
+
+
+        allVals (map (partial _bin->freq (vec data)  samplerate)
                      (range (count data)))
-        no-low-bins (filter #(> cfg/LOWEST-NOTE (:bin %) cfg/HIGHEST-NOTE) allVals)
+        no-low-bins (filter #(> cfg/LOWEST-NOTE-BIN (:bin %) cfg/HIGHEST-NOTE-BIN) allVals)
         goodEnough (filter #(> (:corr %) threshold) no-low-bins)]
 
     (reverse (sort-by :corr goodEnough))))
@@ -142,12 +148,12 @@
 
 (defn process-new-data-in [myAtom]
 
-  (let [{:keys [analyser snapshots sample-rate]} @myAtom
+  (let [{:keys [analyser snapshots sampling-rate]} @myAtom
         analysis (a/readAudioStructure analyser)
         state (:audio-state analysis)
         corrs (:corrs analysis)
 
-        new-snapshots (updateSnapshots snapshots state corrs sample-rate 0.9)
+        new-snapshots (updateSnapshots snapshots state corrs sampling-rate 0.9)
         newAnalysis (assoc analysis :snapshots new-snapshots)]
 
     (swap! myAtom merge newAnalysis)))

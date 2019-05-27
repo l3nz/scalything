@@ -23,13 +23,19 @@
       (* 12)
       (+ cfg/CENTRAL-A-NOTE-NUMBER)))
 
+(defn noteOfPertinence
+  "Which integer note is this (within  +/- 0.5 of a note)"
+  [noteNum]
+  (-> noteNum
+      (+ 0.5)
+      int))
+
+
 (defn toNote
   "A"
   [noteNum]
 
-  (let [pos (-> noteNum
-                (+ 0.5)
-                int)
+  (let [pos (noteOfPertinence noteNum)
         octave (int (/ noteNum 12))
         rdelta  (- noteNum pos)
 

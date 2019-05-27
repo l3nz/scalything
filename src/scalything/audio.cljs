@@ -1,5 +1,7 @@
 (ns scalything.audio
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [scalything.notes :as notes]
+            [scalything.cfg :as cfg]))
 
 (defn ^:export create-audio-context
   "Construct an audio context in a way that works even if it's prefixed.
@@ -20,6 +22,24 @@
 ; navigator.mozGetUserMedia has been replaced by navigator.mediaDevices.getUserMedia
 
 
+
+(defn freqForBin
+  [nBin samplingRate]
+
+  (if (pos? nBin)
+    (/ samplingRate nBin)
+    0))
+
+
+
+(defn noteId
+  "Given  a bin and a sampling rate, computes which note is that."
+  [nBin samplingrate]
+  (-> (freqForBin nBin samplingrate)
+      notes/noteNumFromPitch
+      notes/noteOfPertinence))
+
+
 (defn audioEnvironment
   [stream]
   (let [samplerate (.-sampleRate @audioContext)
@@ -29,7 +49,9 @@
 
     {:audio-context @audioContext
      :sampling-rate samplerate
-     :analyser analyser}))
+     :min-note-id   (noteId cfg/LOWEST-NOTE-BIN samplerate)
+     :max-note-id   (noteId cfg/HIGHEST-NOTE-BIN samplerate)
+     :analyser      analyser}))
 
 (defn getUserMedia
   "https://github.com/johnjelinek/cljs-getusermedia/blob/master/src/cljs/gum/core.cljs
@@ -137,10 +159,3 @@
         results (compute-autocorrelation vals)]
 
     (swap! myAtom merge results)))
-
-(defn freqForBin
-  [nBin samplingRate]
-
-  (if (pos? nBin)
-    (/ samplingRate nBin)
-    0))

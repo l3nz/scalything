@@ -4,10 +4,12 @@
 (defonce S (r/atom {:bins []
                     :audio-context nil
                     :sampling-rate 44100
+                    :min-note-id 1
+                    :max-note-id 2
                     :snapshots []}))
 
-(def HIGHEST-NOTE 50)
-(def LOWEST-NOTE 500)
+(def HIGHEST-NOTE-BIN 50)
+(def LOWEST-NOTE-BIN 500)
 (def STATE-SIZE 100)
 (def STATE-PER-SECOND 10)
 
@@ -23,3 +25,6 @@
             "B"])
 
 
+
+(defn log [& s]
+  (js/console.log (apply str s)))

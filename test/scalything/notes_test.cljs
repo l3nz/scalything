@@ -1,6 +1,6 @@
 (ns scalything.notes-test
   (:require [clojure.test :as t :refer [deftest is are]]
-            [scalything.notes :refer [noteNumFromPitch toNote toNoteName toNoteNameShort]]))
+            [scalything.notes :refer [noteNumFromPitch toNote toNoteName toNoteNameShort noteOfPertinence]]))
 
 ; See http://localhost:9500/figwheel-extra-main/auto-testing
 
@@ -38,4 +38,15 @@
 
     69 "A-5"))
 
+(deftest noteOfPertinence-test
+  (are [noteIn note]
+    (= note (noteOfPertinence noteIn))
 
+    68.7 69
+    69 69
+    69.1 69
+    69.6 70
+    ))
+
+
+;noteOfPertinence
